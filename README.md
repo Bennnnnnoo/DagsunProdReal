@@ -18,14 +18,20 @@ Deployment goes through `@opennextjs/cloudflare` + Wrangler. The config lives in
 Cloudflare build generates its own, which is how the deploy broke before.
 
 ```bash
-npm run build:worker  # next build + OpenNext bundle -> .open-next/
-npm run preview       # run that bundle locally in workerd
+npm run build         # next build + OpenNext bundle -> .next/ and .open-next/
+npm run build:next    # plain next build only (no Worker bundle)
+npm run preview       # build, then serve the bundle locally in workerd
 npm run deploy        # build + deploy (local, run `npx wrangler login` first)
 ```
 
-Workers Builds (Settings -> Build):
+`npm run build` runs the adapter, so `.open-next/` is always there when it finishes. That matters:
+`npx wrangler deploy` detects the OpenNext project and hands off to `opennextjs-cloudflare deploy`,
+which needs the compiled config in `.open-next/.build/` and fails without it. Without a Wrangler
+config of its own, `next build` alone produces only `.next/`.
 
-- Build command: `npm run build:worker`
+Workers Builds (Settings -> Build) can keep the defaults:
+
+- Build command: `npm run build`
 - Deploy command: `npx wrangler deploy`
 
 Keep in mind:
@@ -37,6 +43,8 @@ Keep in mind:
 - There is no `WORKER_SELF_REFERENCE` binding on purpose: the site is fully static (no ISR, no R2
   incremental cache, no route handlers, no `revalidate*`), so nothing needs to call the Worker
   itself. Only add it back, with the matching name, when ISR/R2 caching is introduced.
+- The adapter normally builds Next by running the `build` script, which would recurse here, so
+  `open-next.config.ts` sets `buildCommand` to `npm run build:next`.
 - `npm run dev` and `next start` are unaffected by any of this.
 
 ## Structure
