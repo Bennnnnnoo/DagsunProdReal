@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dagsunsounds",
+  "main": ".open-next/worker.js",
+  // Bump when you change the runtime requirements. Must be >= 2024-09-23 for OpenNext.
+  "compatibility_date": "2026-10-25",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "upload_source_maps": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // No "services" block on purpose.
+  //
+  // The Cloudflare build used to generate this config itself and added a
+  // WORKER_SELF_REFERENCE service binding pointing at "dagsunsounds" (taken from
+  // package.json's "name"). Workers Builds deploys to the Worker name set in the
+  // dashboard and overrides "name" above with WRANGLER_CI_OVERRIDE_NAME, but it does
+  // not rewrite services[].service - so the upload failed with:
+  //   Service binding 'WORKER_SELF_REFERENCE' references Worker 'dagsunsounds'
+  //   which was not found. [code: 10143]
+  //
+  // This site is fully static (no ISR, no R2 incremental cache, no route handlers,
+  // no revalidate*), so nothing here needs to call the Worker itself.
+  //
+  // If you ever add ISR / the R2 incremental cache / Pages-Router res.revalidate,
+  // add the binding back with the exact Worker name from the dashboard, which must
+  // also equal "name" above:
+  //   "services": [
+  //     { "binding": "WORKER_SELF_REFERENCE", "service": "<dashboard Worker name>" }
+  //   ]
+}

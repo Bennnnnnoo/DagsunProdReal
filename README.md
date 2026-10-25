@@ -11,6 +11,34 @@ npm run build
 npm run lint
 ```
 
+## Deploy (Cloudflare Workers)
+
+Deployment goes through `@opennextjs/cloudflare` + Wrangler. The config lives in
+`wrangler.jsonc` and `open-next.config.ts` — keep both committed; when they are absent the
+Cloudflare build generates its own, which is how the deploy broke before.
+
+```bash
+npm run build:worker  # next build + OpenNext bundle -> .open-next/
+npm run preview       # run that bundle locally in workerd
+npm run deploy        # build + deploy (local, run `npx wrangler login` first)
+```
+
+Workers Builds (Settings -> Build):
+
+- Build command: `npm run build:worker`
+- Deploy command: `npx wrangler deploy`
+
+Keep in mind:
+
+- The Worker name in the Cloudflare dashboard is authoritative. Workers Builds overrides `name`
+  in `wrangler.jsonc` with `WRANGLER_CI_OVERRIDE_NAME`, but it does **not** rewrite service
+  bindings — so a `WORKER_SELF_REFERENCE` binding must carry the exact dashboard name or the
+  upload fails with `code: 10143`.
+- There is no `WORKER_SELF_REFERENCE` binding on purpose: the site is fully static (no ISR, no R2
+  incremental cache, no route handlers, no `revalidate*`), so nothing needs to call the Worker
+  itself. Only add it back, with the matching name, when ISR/R2 caching is introduced.
+- `npm run dev` and `next start` are unaffected by any of this.
+
 ## Structure
 
 ```
@@ -35,6 +63,8 @@ src/
     site.ts                Label name
     theme.ts               Theme hook (dark only via <html data-theme="dark">)
     themeScript.ts         Applies a saved theme before first paint
+wrangler.jsonc             Cloudflare Worker config (name, static assets)
+open-next.config.ts        OpenNext adapter config (static site, no cache bindings)
 scripts/
   split-art.py             "SVG IMAGE.svg" -> src/assets/art (layers, cones, drivers.ts)
   prepare-decks.py         "NEW dj decks.jpeg" -> decks.png + fader cap sprites
